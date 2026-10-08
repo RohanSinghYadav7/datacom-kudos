@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String
+  email                 String                 @unique
+  passwordHash          String
+  role                  String                 @default("USER")
+  active                Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  sessions              Session[]
+  sentKudos             Kudos[]                @relation("KudosSender")
+  receivedKudos         Kudos[]                @relation("KudosRecipient")
+  moderatedKudos        Kudos[]                @relation("KudosModerator")
+  moderationAudits      ModerationAudit[]
+  idempotencyKeys       IdempotencyKey[]
+  submissionRateWindows SubmissionRateWindow[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  csrfToken String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model Kudos {
+  id                  String   @id @default(cuid())
+  senderUserId        String
+  recipientUserId     String
+  message             String
+  createdAt           DateTime @default(now()) @map("created_at")
+  isVisible           Boolean  @default(true) @map("is_visible")
+  moderatedBy         String?  @map("moderated_by")
+  moderatedAt         DateTime? @map("moderated_at")
+  reasonForModeration String?  @map("reason_for_moderation")
+  sender              User     @relation("KudosSender", fields: [senderUserId], references: [id], onDelete: Restrict)
+  recipient           User     @relation("KudosRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  moderator           User?    @relation("KudosModerator", fields: [moderatedBy], references: [id], onDelete: Restrict)
+
+  @@index([isVisible, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([senderUserId, createdAt(sort: Desc)])
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  actorId     String
+  key         String
+  requestHash String
+  kudosId     String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, key])
+  @@index([expiresAt])
+}
+
+model SubmissionRateWindow {
+  id         String   @id @default(cuid())
+  actorId    String
+  windowStart DateTime
+  count      Int      @default(0)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, windowStart])
+}
+
+model ModerationAudit {
+  id         String   @id @default(cuid())
+  kudosId    String
+  moderatorId String
+  action     String
+  reason     String
+  createdAt  DateTime @default(now())
+  moderator  User     @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+
+  @@index([kudosId, createdAt(sort: Desc)])
+  @@index([moderatorId, createdAt(sort: Desc)])
+}

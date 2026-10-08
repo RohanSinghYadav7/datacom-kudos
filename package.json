@@ -1,0 +1,22 @@
+{
+  "name": "kudos-app",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build -w @kudos/api && npm run build -w @kudos/web",
+    "typecheck": "npm run typecheck -w @kudos/api && npm run typecheck -w @kudos/web",
+    "test": "npm run test -w @kudos/api && npm run test -w @kudos/web",
+    "db:generate": "npm run db:generate -w @kudos/api",
+    "db:migrate": "npm run db:migrate -w @kudos/api",
+    "db:seed:admin": "npm run db:seed:admin -w @kudos/api",
+    "start": "npm run start -w @kudos/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
